@@ -45,21 +45,21 @@ def get_function_args(fn_str):
     # Remove arrays
     fn_str = re.sub(r"\[.*\]", "", fn_str)
 
-    arg_regex = r"(?P<type>[a-zA-Z_]\w*)\s*(?P<name>[a-zA-Z_]\w*)"
+    arg_regex = r"(?P<dir>((IN|OUT)\s*)*)(?P<type>[a-zA-Z_]\w*)\s*(?P<name>[a-zA-Z_]\w*)"
 
     if ',' not in fn_str:
         if ' ' not in fn_str:
-            return [("void", "")]
+            return [(None, "void", "")]
         else:
             m = re.search(arg_regex, fn_str)
             if m and m.group("type"):
-                return [(m.group("type"), m.group("name"))]
+                return [(m.group("dir"), m.group("type"), m.group("name"))]
 
     result = []
     for arg in fn_str.split(','):
         m = re.search(arg_regex, arg)
         if m and m.group('type'):
-            result.append( (m.group('type'), m.group('name')) )
+            result.append( (m.group("dir"), m.group('type'), m.group('name')) )
 
     return result
 
@@ -212,12 +212,19 @@ class DoxydocCommand(sublime_plugin.TextCommand):
         # Function arguments
         args = regex_obj.group("args")
 
-        if args and args != "void":
+        if args and args.lower() != "void":
             args = get_function_args(args)
-            for type, name in args:
+            for dir, type, name in args:
                 if type in template_args:
                     template_args.remove(type)
-                snippet += "\n * {0}param {1} ${{{2}:[description]}}".format(self.command_type, name, index)
+                snippet += "\n * {0}param".format(self.command_type)
+                if dir:
+                    snippet += "["
+                    for d in dir.split():
+                        snippet += d.lower() + ","
+                    snippet = snippet.rstrip(",")
+                    snippet += "]"
+                snippet += " {0} ${{{1}:[description]}}".format(name, index)
                 index += 1
 
         for arg in template_args:
@@ -226,7 +233,7 @@ class DoxydocCommand(sublime_plugin.TextCommand):
 
         return_type = regex_obj.group("return")
 
-        if return_type and return_type != "void":
+        if return_type and return_type.lower() != "void":
             snippet += "\n * {0}return ${{{1}:[description]}}".format(self.command_type, index)
 
         snippet += "\n */"
@@ -246,16 +253,23 @@ class DoxydocCommand(sublime_plugin.TextCommand):
 
         args = regex_obj.group("args")
 
-        if args and args != "void":
+        if args and args.lower() != "void":
             snippet += "\n * "
             args = get_function_args(args)
-            for _, name in args:
-                snippet += "\n * {0}param {1} ${{{2}:[description]}}".format(self.command_type, name, index)
+            for dir, _, name in args:
+                snippet += "\n * {0}param".format(self.command_type)
+                if dir:
+                    snippet += "["
+                    for d in dir.split():
+                        snippet += d.lower() + ","
+                    snippet = snippet.rstrip(",")
+                    snippet += "]"
+                snippet += " {0} ${{{1}:[description]}}".format(name, index)
                 index += 1
 
         return_type = regex_obj.group("return")
 
-        if return_type and return_type != "void":
+        if return_type and return_type.lower() != "void":
             if index == 5:
                 snippet += "\n * "
             snippet += "\n * {0}return ${{{1}:[description]}}".format(self.command_type, index)
