@@ -169,7 +169,6 @@ class DoxydocCommand(sublime_plugin.TextCommand):
         # Check if it's a regular function
         regex_function = re.search(self.regexp["function"], function_lines)
         if regex_function:
-            print regex_function.groups()
             return self.function_snippet(regex_function)
 
         # Check if it's a regular class
