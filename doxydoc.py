@@ -71,10 +71,10 @@ class DoxydocCommand(sublime_plugin.TextCommand):
         self.regexp = {
             "templates": r"\s*template\s*<(.+)>\s*",
             "class": r"\s*(?:class|struct)\s*" + identifier + r"\s*{?",
-            "function": function_identifiers + r"(?P<return>(?:typename\s*)?[\w:<>]+)?\s*"
+            "function": function_identifiers + r"(?P<return>[\w:<>]+)?\s*(EFIAPI\s*)?"
                                                r"(?P<subname>[A-Za-z_]\w*::)?"
                                                r"(?P<name>operator\s*.{1,2}|[A-Za-z_:]\w*)\s*"
-                                               r"\((?P<args>[:<>\[\]\(\),.*&\w\s]*)\).+",
+                                               r"\((?P<args>[:<>\[\]\(\),.*&\w\s]*)\)",
 
             "constructor": function_identifiers + r"(?P<return>)" # dummy so it doesn't error out
                                                   r"~?(?P<name>[a-zA-Z_]\w*)(?:\:\:[a-zA-Z_]\w*)?"
@@ -98,10 +98,10 @@ class DoxydocCommand(sublime_plugin.TextCommand):
         max_lines = 25 # maximum amount of lines to parse functions with
         current_line = read_line(view, point)
         if not current_line or current_line.find("/**") == -1:
-            # Strange bug.. 
+            # Strange bug..
             return "\n * ${0}\n */"
 
-        point += len(current_line) + 1
+        point += 1
 
         next_line = read_line(view, point)
 
@@ -149,7 +149,7 @@ class DoxydocCommand(sublime_plugin.TextCommand):
             if reclass:
                 return self.template_snippet(template_args)
 
-        function_lines = ''.join(next_line) # make a copy
+        function_lines = ''.join(next_line) + ' ' # make a copy
         function_point = point + len(next_line) + 1
 
         for x in range(0, max_lines + 1):
@@ -158,7 +158,7 @@ class DoxydocCommand(sublime_plugin.TextCommand):
             if not line:
                 break
 
-            function_lines += line
+            function_lines += line + ' '
             function_point += len(line) + 1
 
         # Check if it's a regular constructor or destructor
@@ -169,6 +169,7 @@ class DoxydocCommand(sublime_plugin.TextCommand):
         # Check if it's a regular function
         regex_function = re.search(self.regexp["function"], function_lines)
         if regex_function:
+            print regex_function.groups()
             return self.function_snippet(regex_function)
 
         # Check if it's a regular class
@@ -275,5 +276,5 @@ class DoxydocCommand(sublime_plugin.TextCommand):
             snippet += "\n * {0}return ${{{1}:[description]}}".format(self.command_type, index)
 
         snippet += "\n */"
-        return snippet    
+        return snippet
 
